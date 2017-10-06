@@ -72,4 +72,17 @@ package m4x4_mult_pkg is
       );
   end component;
 
+  component debouncer is
+    generic (
+      g_stability_counter_max : integer := 1000000; -- 10ms for 100MHz system frequency
+      g_stability_counter_width : integer := 20 -- ln(1000000)/ln(2) + 1
+      );
+    port (
+      clk_i    : in  std_logic;
+      rst_i    : in  std_logic;
+      button_i : in  std_logic;
+      button_o : out std_logic
+      );
+  end component;
+
 end package;

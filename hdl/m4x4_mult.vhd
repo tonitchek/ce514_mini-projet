@@ -148,21 +148,21 @@ begin
     end if;
   end process;
 
-  inhibit_synchronizer:process(clk_i)
-  begin
-    if clk_i'event and clk_i = '1' then
-      if rst_i = '1' then
-        sync0    <= '0';
-        sync1    <= '0';
-        sync2    <= '0';
-        inhibit_sync <= '0';
-      else
-        sync0    <= inhibit_i;
-        sync1    <= sync0;
-        sync2    <= sync1;
-        inhibit_sync <= sync2;
-      end if;
-    end if;
-  end process;
+  -- stability time calcul: clk_i is 250MHz
+  -- consider button stable within 10ms
+  -- we look for counter width giving counter_max * 1/clk_i = 10ms
+  -- so counter_max = 0.01 * clk_i = 2500000
+  -- and counter_width = ceil[ln(2500000)/ln2] = 22 bits
+  inhibit_debounce_sync:debouncer
+    generic map (
+      g_stability_counter_max => 250,
+      g_stability_counter_width => f_ceil_log2(250)
+      )
+    port map (
+      clk_i => clk_i,
+      rst_i => rst_i,
+      button_i => inhibit_i,
+      button_o => inhibit_sync
+      );
 
 end architecture;
