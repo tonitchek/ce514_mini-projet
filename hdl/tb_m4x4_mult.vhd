@@ -21,14 +21,14 @@ architecture Behavorial of tb_m4x4_mult is
   signal inhibit_i : std_logic;
   signal start_i : std_logic;
   signal done_o : std_logic;
-  signal mata_rows_i  : mat_4x4_8bits := ((X"FF",X"38",X"17",X"CA"),
-                                          (X"02",X"4E",X"36",X"5A"),
-                                          (X"F7",X"0A",X"20",X"80"),
-                                          (X"43",X"A7",X"2B",X"5A"));
-  signal matb_cols_i  : mat_4x4_8bits := ((X"04",X"02",X"17",X"08"),
-                                          (X"38",X"C4",X"02",X"00"),
-                                          (X"08",X"0A",X"EA",X"40"),
-                                          (X"EA",X"0F",X"4E",X"01"));
+  signal mata_rows_i  : mat_4x4_8bits := ((X"5A",X"2B",X"A7",X"43"),
+                                          (X"80",X"20",X"0A",X"F7"),
+                                          (X"5A",X"36",X"4E",X"02"),
+                                          (X"CA",X"17",X"38",X"FF"));
+  signal matb_cols_i  : mat_4x4_8bits := ((X"01",X"4E",X"0F",X"EA"),
+                                          (X"40",X"EA",X"0A",X"08"),
+                                          (X"00",X"02",X"C4",X"38"),
+                                          (X"08",X"17",X"02",X"04"));
   signal matc_rows0_o : mat_1x4_18bits;
   signal matc_rows1_o : mat_1x4_18bits;
   signal matc_rows2_o : mat_1x4_18bits;
