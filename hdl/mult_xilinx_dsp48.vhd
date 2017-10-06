@@ -38,6 +38,7 @@ begin
     if clk_i'event and clk_i = '1' then
       if rst_i = '1' then
         dout_int <= (others => '0');
+        dout_int1 <= (others => '0');
       else
         dout_int <= unsigned(dina_i) * unsigned(dinb_i);
         -- pipeline to meet timing constraint
