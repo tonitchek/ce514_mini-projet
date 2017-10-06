@@ -57,8 +57,6 @@ begin
           -- zero is added to extend 16bits to 18bits in order to prevent
           -- overflow
           ele_macc_int <= zero + unsigned(mult_int(0)) + unsigned(mult_int(1)) + unsigned(mult_int(2)) + unsigned(mult_int(3));
-        else
-          ele_macc_int <= (others => '0');
         end if;
       end if;
     end if;
