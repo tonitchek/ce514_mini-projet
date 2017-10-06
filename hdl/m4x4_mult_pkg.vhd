@@ -13,8 +13,9 @@ package m4x4_mult_pkg is
   type mat_4x4_8bits is array (3 downto 0, 3 downto 0) of std_logic_vector(7 downto 0);
   type mat_1x4_8bits is array (3 downto 0) of std_logic_vector(7 downto 0);
 
-  -- 1D vector containing outpu matrix elements (order: E00,E01,...,E33)
-  type mat_1x16_18bits is array (15 downto 0) of std_logic_vector(17 downto 0);
+  -- 1D vector containing output matrix rows elements (order: [E00,E01,E02,E03]
+  -- or [E10,E11,E12,E13], etc...)
+  type mat_1x4_18bits is array (3 downto 0) of std_logic_vector(17 downto 0);
 
   component mult_xilinx_dsp48 is
     generic (
@@ -39,6 +40,35 @@ package m4x4_mult_pkg is
       row_i      : in  mat_1x4_8bits;
       col_i      : in  mat_1x4_8bits;
       ele_macc_o : out std_logic_vector(17 downto 0)
+      );
+  end component;
+
+  component m4x4_mult is
+    port (
+      clk_i        : in  std_logic;
+      rst_i        : in  std_logic;
+      inhibit_i    : in  std_logic;
+      start_i      : in  std_logic;
+      mata_rows_i  : in  mat_4x4_8bits;
+      matb_cols_i  : in  mat_4x4_8bits;
+      matc_rows0_o : out mat_1x4_18bits;
+      matc_rows1_o : out mat_1x4_18bits;
+      matc_rows2_o : out mat_1x4_18bits;
+      matc_rows3_o : out mat_1x4_18bits;
+      done_o       : out std_logic
+      );
+  end component;
+
+  component top_m4x4_mult is
+    port (
+      clk_i     : in  std_logic;
+      rst_i     : in  std_logic;
+      inhibit_i : in  std_logic;
+      start_i   : in  std_logic;
+      row_i     : in  std_logic_vector(7 downto 0);
+      col_i     : in  std_logic_vector(7 downto 0);
+      done_o    : out std_logic;
+      matc_o    : out std_logic_vector(17 downto 0)
       );
   end component;
 
