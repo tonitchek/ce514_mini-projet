@@ -11,6 +11,9 @@ library work;
 use work.m4x4_mult_pkg.all;
 
 entity m4x4_mult is
+  generic (
+    g_simulation : boolean := false
+    );
   port (
     clk_i        : in  std_logic;
     rst_i        : in  std_logic;
@@ -31,9 +34,6 @@ architecture rtl of m4x4_mult is
   type stmac is (idle, acc, done);
   signal state   : stmac;
   signal acc_int : std_logic;
-  signal sync0 : std_logic;
-  signal sync1 : std_logic;
-  signal sync2 : std_logic;
   signal inhibit_sync : std_logic;
 
 begin
@@ -148,21 +148,27 @@ begin
     end if;
   end process;
 
-  -- stability time calcul: clk_i is 250MHz
-  -- consider button stable within 10ms
-  -- we look for counter width giving counter_max * 1/clk_i = 10ms
-  -- so counter_max = 0.01 * clk_i = 2500000
-  -- and counter_width = ceil[ln(2500000)/ln2] = 22 bits
-  inhibit_debounce_sync:debouncer
-    generic map (
-      g_stability_counter_max => 250,
-      g_stability_counter_width => f_ceil_log2(250)
-      )
-    port map (
-      clk_i => clk_i,
-      rst_i => rst_i,
-      button_i => inhibit_i,
-      button_o => inhibit_sync
-      );
+  with_debouncer:if g_simulation = false generate
+    -- stability time calcul: clk_i is 250MHz
+    -- consider button stable within 10ms
+    -- we look for counter width giving counter_max * 1/clk_i = 10ms
+    -- so counter_max = 0.01 * clk_i = 2500000
+    -- and counter_width = ceil[ln(2500000)/ln2] = 22 bits
+    inhibit_debounce_sync:debouncer
+      generic map (
+        g_stability_counter_max => 250,
+        g_stability_counter_width => 22
+        )
+      port map (
+        clk_i => clk_i,
+        rst_i => rst_i,
+        button_i => inhibit_i,
+        button_o => inhibit_sync
+        );
+  end generate with_debouncer;
+
+  no_debouncer:if g_simulation = true generate
+    inhibit_sync <= inhibit_i;
+  end generate no_debouncer;
 
 end architecture;

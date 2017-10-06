@@ -37,6 +37,9 @@ architecture Behavorial of tb_m4x4_mult is
 begin
 
   uut:m4x4_mult
+    generic map (
+      g_simulation => true
+      )
     port map (
       clk_i => clk_i,
       rst_i => rst_i,

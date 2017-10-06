@@ -44,6 +44,9 @@ package m4x4_mult_pkg is
   end component;
 
   component m4x4_mult is
+    generic (
+      g_simulation : boolean := false
+    );
     port (
       clk_i        : in  std_logic;
       rst_i        : in  std_logic;
