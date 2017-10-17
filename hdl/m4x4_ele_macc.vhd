@@ -36,7 +36,7 @@ begin
       generic map (
         g_dina_width => 8,
         g_dinb_width => 8,
-        g_use_dsp48  => "yes"
+        g_use_dsp    => "yes"
         )
       port map (
         clk_i => clk_i,

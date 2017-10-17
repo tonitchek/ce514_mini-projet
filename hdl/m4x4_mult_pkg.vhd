@@ -21,7 +21,7 @@ package m4x4_mult_pkg is
     generic (
       g_dina_width : integer := 8;
       g_dinb_width : integer := 8;
-      g_use_dsp48  : string  := "yes"
+      g_use_dsp    : string  := "yes"
       );
     port (
       clk_i  : in  std_logic;
@@ -44,9 +44,6 @@ package m4x4_mult_pkg is
   end component;
 
   component m4x4_mult is
-    generic (
-      g_simulation : boolean := false
-    );
     port (
       clk_i        : in  std_logic;
       rst_i        : in  std_logic;
@@ -59,32 +56,6 @@ package m4x4_mult_pkg is
       matc_rows2_o : out mat_1x4_18bits;
       matc_rows3_o : out mat_1x4_18bits;
       done_o       : out std_logic
-      );
-  end component;
-
-  component top_m4x4_mult is
-    port (
-      clk_i     : in  std_logic;
-      rst_i     : in  std_logic;
-      inhibit_i : in  std_logic;
-      start_i   : in  std_logic;
-      row_i     : in  std_logic_vector(7 downto 0);
-      col_i     : in  std_logic_vector(7 downto 0);
-      done_o    : out std_logic;
-      matc_o    : out std_logic_vector(17 downto 0)
-      );
-  end component;
-
-  component debouncer is
-    generic (
-      g_stability_counter_max : integer := 1000000; -- 10ms for 100MHz system frequency
-      g_stability_counter_width : integer := 20 -- ln(1000000)/ln(2) + 1
-      );
-    port (
-      clk_i    : in  std_logic;
-      rst_i    : in  std_logic;
-      button_i : in  std_logic;
-      button_o : out std_logic
       );
   end component;
 
