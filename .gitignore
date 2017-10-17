@@ -1,0 +1,4 @@
+system/ip_repo/*
+!system/ip_repo/matrix_4x4_multiplier_1.0
+!system/ip_repo/matrix_4x4_multiplier_2.0
+system/soc
