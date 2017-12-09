@@ -53,7 +53,7 @@ begin
     rst_i <= '0';
     wait for 138 ns;
     acc_i <= '1';
-    wait for 41 ns;
+    wait for clk_period;
     acc_i <= '0';
 
     wait;
