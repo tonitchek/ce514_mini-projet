@@ -19,8 +19,10 @@ entity matrix_4x4_multiplier_v2_0_S00_AXI is
 	);
 	port (
 		-- Users to add ports here
-		CLK_DSP_I	: in std_logic;
-		INHIBIT_I	: in std_logic;
+		CLK_DSP_I	: in  std_logic;
+		INHIBIT_I	: in  std_logic;
+                BEGIN_O         : out std_logic;
+                END_O           : out std_logic;
 
 		-- User ports ends
 		-- Do not modify the ports beyond this line
@@ -116,24 +118,22 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
 	---- Number of Slave Registers 50
         -- Slave Registers description (R/W=Read/Write, RO=Read-Only, WO=Write-Only):
         -- REG0 : CSR, R/W
-        -- REG1 : TIMER, WO
+        -- REG1 : UNUSED / RESERVED
         -- REG02...REG17 : MATA_ROWS, RO
         -- REG18...REG33 : MATB_COLS, RO
         -- REG34...REG49 : MATC_ELEM, WO
         -- CSR (REG0) declaration
-        signal csr_start_reg      : std_logic; -- s_axi_aclk domain
-        signal csr_ena_timer_reg  : std_logic; -- s_axi_aclk domain
-        signal csr_clr_timer_reg  : std_logic; -- s_axi_aclk domain
-        signal csr_auto_timer_reg : std_logic; -- s_axi_aclk domain
-        signal start_sync         : std_logic; -- clk_dsp_i domain
-        signal ena_timer_sync     : std_logic; -- clk_dsp_i domain
-        signal clr_timer_sync     : std_logic; -- clk_dsp_i domain
-        signal aut_timer_sync     : std_logic; -- clk_dsp_i domain
-        signal done               : std_logic; -- clk_dsp_i domain
-        signal done_sync          : std_logic; -- s_axi_aclk domain
-        -- TIMER (REG1) declaration
-        signal timer_cnt         : std_logic_vector(31 downto 0); -- clk_dsp_i domain
-        signal timer_cnt_sync    : std_logic_vector(31 downto 0); -- s_axi_aclk domain
+        signal csr_stt_reg      : std_logic; -- s_axi_aclk domain
+        signal stt_sync         : std_logic; -- clk_dsp_i domain
+        signal done             : std_logic; -- clk_dsp_i domain
+        signal done_sync        : std_logic; -- s_axi_aclk domain
+        signal done_monostable  : std_logic; -- clk_dsp_i domain
+        signal csr_bgn_reg      : std_logic; -- s_axi_aclk domain
+        signal bgn_sync         : std_logic; -- clk_dsp_i domain
+        signal csr_end_reg      : std_logic; -- s_axi_aclk domain
+        signal end_sync         : std_logic; -- clk_dsp_i domain
+        signal csr_ato_reg      : std_logic; -- s_axi_aclk domain
+        signal ato_sync         : std_logic; -- clk_dsp_i domain
         -- MATA & MATB (REG2...REG33) declaration
         type slv_reg_mat_in_array is array (3 downto 0) of std_logic_vector(31 downto 0);
         signal mata_row0_reg02_05 : slv_reg_mat_in_array; -- s_axi_aclk domain
@@ -167,9 +167,6 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
         signal matc_rows1_out    : mat_1x4_18bits; -- clk_dsp_i domain
         signal matc_rows2_out    : mat_1x4_18bits; -- clk_dsp_i domain
         signal matc_rows3_out    : mat_1x4_18bits; -- clk_dsp_i domain
-
-        signal ena_timer     : std_logic; -- clk_dsp_i domain
-        signal clr_timer     : std_logic; -- clk_dsp_i domain
         --
         component debouncer is
           generic (
@@ -181,20 +178,6 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
             rst_i    : in  std_logic;
             button_i : in  std_logic;
             button_o : out std_logic
-            );
-        end component;
-
-        component generic_counter is
-          generic (
-            g_width : integer := 32
-            );
-          port (
-            clk_i : in  std_logic;
-            rst_i : in  std_logic;
-            ena_i : in  std_logic;
-            clr_i : in  std_logic;
-            ofw_o : out std_logic;
-            cnt_o : out std_logic_vector(g_width - 1 downto 0)
             );
         end component;
 
@@ -321,10 +304,10 @@ begin
 	begin
 	  if rising_edge(S_AXI_ACLK) then 
 	    if S_AXI_ARESETN = '0' then
-              csr_start_reg      <= '0';
-              csr_ena_timer_reg  <= '0';
-              csr_clr_timer_reg  <= '0';
-              csr_auto_timer_reg <= '0';
+              csr_stt_reg        <= '0';
+              csr_bgn_reg        <= '0';
+              csr_end_reg        <= '0';
+              csr_ato_reg        <= '0';
               mata_row0_reg02_05 <= (others => (others => '0'));
               mata_row1_reg06_09 <= (others => (others => '0'));
               mata_row2_reg10_13 <= (others => (others => '0'));
@@ -338,10 +321,10 @@ begin
 	      if (slv_reg_wren = '1') then
 	        case loc_addr is
 	          when b"000000" =>
-                    csr_start_reg <= S_AXI_WDATA(0);
-                    csr_ena_timer_reg <= S_AXI_WDATA(2);
-                    csr_clr_timer_reg <= S_AXI_WDATA(3);
-                    csr_auto_timer_reg <= S_AXI_WDATA(4);
+                    csr_stt_reg <= S_AXI_WDATA(0);
+                    csr_bgn_reg <= S_AXI_WDATA(2);
+                    csr_end_reg <= S_AXI_WDATA(3);
+                    csr_ato_reg <= S_AXI_WDATA(4);
 	          when b"000010" =>
                     mata_row0_reg02_05(0) <= S_AXI_WDATA;
 	          when b"000011" =>
@@ -495,117 +478,6 @@ begin
 	-- and the slave is ready to accept the read address.
 	slv_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
 
---	process (slv_reg0, slv_reg1, slv_reg2, slv_reg3, slv_reg4, slv_reg5, slv_reg6, slv_reg7, slv_reg8, slv_reg9, slv_reg10, slv_reg11, slv_reg12, slv_reg13, slv_reg14, slv_reg15, slv_reg16, slv_reg17, slv_reg18, slv_reg19, slv_reg20, slv_reg21, slv_reg22, slv_reg23, slv_reg24, slv_reg25, slv_reg26, slv_reg27, slv_reg28, slv_reg29, slv_reg30, slv_reg31, slv_reg32, slv_reg33, slv_reg34, slv_reg35, slv_reg36, slv_reg37, slv_reg38, slv_reg39, slv_reg40, slv_reg41, slv_reg42, slv_reg43, slv_reg44, slv_reg45, slv_reg46, slv_reg47, slv_reg48, slv_reg49, axi_araddr, S_AXI_ARESETN, slv_reg_rden)
---	variable loc_addr :std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
---	begin
---	    -- Address decoding for reading registers
---	    loc_addr := axi_araddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
---	    case loc_addr is
---	      when b"000000" =>
---	        reg_data_out <= slv_reg0;
---	      when b"000001" =>
---	        reg_data_out <= slv_reg1;
---	      when b"000010" =>
---	        reg_data_out <= slv_reg2;
---	      when b"000011" =>
---	        reg_data_out <= slv_reg3;
---	      when b"000100" =>
---	        reg_data_out <= slv_reg4;
---	      when b"000101" =>
---	        reg_data_out <= slv_reg5;
---	      when b"000110" =>
---	        reg_data_out <= slv_reg6;
---	      when b"000111" =>
---	        reg_data_out <= slv_reg7;
---	      when b"001000" =>
---	        reg_data_out <= slv_reg8;
---	      when b"001001" =>
---	        reg_data_out <= slv_reg9;
---	      when b"001010" =>
---	        reg_data_out <= slv_reg10;
---	      when b"001011" =>
---	        reg_data_out <= slv_reg11;
---	      when b"001100" =>
---	        reg_data_out <= slv_reg12;
---	      when b"001101" =>
---	        reg_data_out <= slv_reg13;
---	      when b"001110" =>
---	        reg_data_out <= slv_reg14;
---	      when b"001111" =>
---	        reg_data_out <= slv_reg15;
---	      when b"010000" =>
---	        reg_data_out <= slv_reg16;
---	      when b"010001" =>
---	        reg_data_out <= slv_reg17;
---	      when b"010010" =>
---	        reg_data_out <= slv_reg18;
---	      when b"010011" =>
---	        reg_data_out <= slv_reg19;
---	      when b"010100" =>
---	        reg_data_out <= slv_reg20;
---	      when b"010101" =>
---	        reg_data_out <= slv_reg21;
---	      when b"010110" =>
---	        reg_data_out <= slv_reg22;
---	      when b"010111" =>
---	        reg_data_out <= slv_reg23;
---	      when b"011000" =>
---	        reg_data_out <= slv_reg24;
---	      when b"011001" =>
---	        reg_data_out <= slv_reg25;
---	      when b"011010" =>
---	        reg_data_out <= slv_reg26;
---	      when b"011011" =>
---	        reg_data_out <= slv_reg27;
---	      when b"011100" =>
---	        reg_data_out <= slv_reg28;
---	      when b"011101" =>
---	        reg_data_out <= slv_reg29;
---	      when b"011110" =>
---	        reg_data_out <= slv_reg30;
---	      when b"011111" =>
---	        reg_data_out <= slv_reg31;
---	      when b"100000" =>
---	        reg_data_out <= slv_reg32;
---	      when b"100001" =>
---	        reg_data_out <= slv_reg33;
---	      when b"100010" =>
---	        reg_data_out <= slv_reg34;
---	      when b"100011" =>
---	        reg_data_out <= slv_reg35;
---	      when b"100100" =>
---	        reg_data_out <= slv_reg36;
---	      when b"100101" =>
---	        reg_data_out <= slv_reg37;
---	      when b"100110" =>
---	        reg_data_out <= slv_reg38;
---	      when b"100111" =>
---	        reg_data_out <= slv_reg39;
---	      when b"101000" =>
---	        reg_data_out <= slv_reg40;
---	      when b"101001" =>
---	        reg_data_out <= slv_reg41;
---	      when b"101010" =>
---	        reg_data_out <= slv_reg42;
---	      when b"101011" =>
---	        reg_data_out <= slv_reg43;
---	      when b"101100" =>
---	        reg_data_out <= slv_reg44;
---	      when b"101101" =>
---	        reg_data_out <= slv_reg45;
---	      when b"101110" =>
---	        reg_data_out <= slv_reg46;
---	      when b"101111" =>
---	        reg_data_out <= slv_reg47;
---	      when b"110000" =>
---	        reg_data_out <= slv_reg48;
---	      when b"110001" =>
---	        reg_data_out <= slv_reg49;
---	      when others =>
---	        reg_data_out  <= (others => '0');
---	    end case;
---	end process; 
-
         -- SLAVE WRITE process (MASTER, i.e processor, initiated READ cycle)
 	-- Output register or memory read data
 	process( S_AXI_ACLK ) is
@@ -625,9 +497,9 @@ begin
                 loc_addr := axi_araddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
                 case loc_addr is
                   when b"000000" =>
-                    axi_rdata <= "000000000000000000000000000" & csr_auto_timer_reg & '0' & csr_ena_timer_reg & done_sync & '0';
+                    axi_rdata <= "000000000000000000000000000" & csr_ato_reg & "00" & done_sync & '0';
                   when b"000001" =>
-                    axi_rdata <= timer_cnt_sync;
+                    axi_rdata <= X"00000000"; --unused / reserved
                   when b"000010" =>
                     axi_rdata <= mata_row0_reg02_05(0);
                   when b"000011" =>
@@ -736,13 +608,13 @@ begin
 
 	-- Add user logic here
         axi_reset_high <= not S_AXI_ARESETN;
-
+        
         matrix_4x4_mult_inst:m4x4_mult
           port map (
             clk_i        => CLK_DSP_I,
             rst_i        => reset_sync,
             inhibit_i    => inhibit_debounced,
-            start_i      => start_sync,
+            start_i      => stt_sync,
             mata_rows_i  => mata_rows_in,
             matb_cols_i  => matb_cols_in,
             matc_rows0_o => matc_rows0_out,
@@ -752,22 +624,6 @@ begin
             done_o       => done
             );
       
-        timer_inst:generic_counter
-          generic map (
-            g_width => 32
-            )
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            ena_i => ena_timer,
-            clr_i => clr_timer_sync,
-            ofw_o => open,
-            cnt_o => timer_cnt
-            );
-
-        ena_timer <= not done when aut_timer_sync = '1' else ena_timer_sync;
---        clr_timer <= start_sync when aut_timer_sync = '1' else clr_timer_sync;
-
         -- stability time calcul: clk_i is 250MHz
         -- consider button stable within 10ms
         -- we look for counter width giving counter_max * 1/clk_i = 10ms
@@ -796,36 +652,36 @@ begin
         end process;
 
         -- CSR monostable
-        csr_start_monstable:gc_sync_monostable
+        csr_stt_monstable:gc_sync_monostable
           port map (
             clk_i => CLK_DSP_I,
             rst_i => reset_sync,
-            d_i   => csr_start_reg,
-            q_o   => start_sync
+            d_i   => csr_stt_reg,
+            q_o   => stt_sync
             );
-        csr_clr_timer_monstable:gc_sync_monostable
+        csr_bgn_monstable:gc_sync_monostable
           port map (
             clk_i => CLK_DSP_I,
             rst_i => reset_sync,
-            d_i   => csr_clr_timer_reg,
-            q_o   => clr_timer_sync
+            d_i   => csr_bgn_reg,
+            q_o   => bgn_sync
+            );
+        csr_end_monstable:gc_sync_monostable
+          port map (
+            clk_i => CLK_DSP_I,
+            rst_i => reset_sync,
+            d_i   => csr_end_reg,
+            q_o   => end_sync
+            );
+        done_monstable:gc_sync_monostable
+          port map (
+            clk_i => CLK_DSP_I,
+            rst_i => reset_sync,
+            d_i   => done,
+            q_o   => done_monostable
             );
 
         --CSR synchronizer
-        csr_ena_timer_sync:gc_synchronizer
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => csr_ena_timer_reg,
-            q_o   => ena_timer_sync
-            );
-        csr_auto_timer_sync:gc_synchronizer
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => csr_auto_timer_reg,
-            q_o   => aut_timer_sync
-            );
         csr_done_sync:gc_synchronizer
           port map (
             clk_i => S_AXI_ACLK,
@@ -833,19 +689,21 @@ begin
             d_i   => done,
             q_o   => done_sync
             );
-
-        -- TIMER register sync
-        timer_reg_sync:gc_sync_register
-          generic map (
-            g_width => 32
-            )
+        csr_ato_sync:gc_synchronizer
           port map (
-            clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
-            d_i   => timer_cnt,
-            q_o   => timer_cnt_sync
+            clk_i => CLK_DSP_I,
+            rst_i => reset_sync,
+            d_i   => csr_ato_reg,
+            q_o   => ato_sync
             );
-        
+
+        --We want to put monostable signals on BEGIN_O and END_O outputs
+        --stt_sync is a monostable generated in clk_dsp_i clock domain
+        --so generate all monstable in clk_dsp_i clock domain and
+        --synchronize the selector csr_ato_reg in the clk_dsp_i clock domain
+        BEGIN_O <= bgn_sync when ato_sync = '0' else stt_sync;
+        END_O   <= end_sync when ato_sync = '0' else done_monostable;
+
         -- MATA REGISTERS synchonizers from S_AXI_ACLK to CLK_DSP_I
         mata_row0_reg_sync:for I in 0 to 3 generate
           mata_row0_sync:gc_sync_register
