@@ -27,7 +27,7 @@ void matc_display(uint32_t *mat)
   {
     for(j=0;j<4;j++)
     {
-      printf("0x%03x\t",mat[i*4+j]);
+      printf("%i\t",mat[i*4+j]);
     }
     printf("\r\n");
   }
@@ -57,7 +57,7 @@ void matab_display(uint8_t *mat)
   {
     for(j=0;j<4;j++)
     {
-      printf("0x%01x\t",mat[i*4+j]);
+      printf("0x%i\t",mat[i*4+j]);
     }
     printf("\r\n");
   }
@@ -71,7 +71,7 @@ int main(void)
   uint32_t matc[16];
   uint32_t matc_calc[16];
 
-  f = fopen("matrix.dat","r");
+  f = fopen("tb_matrix.dat","r");
   if(f==NULL)
   {
     printf("Error opening file\n");
@@ -79,35 +79,35 @@ int main(void)
 
   uint8_t i=0,ind;
   //read first matrix A (4 lines)
-  fscanf(f,"%x,%x,%x,%x",&mata[0],&mata[1],&mata[2],&mata[3]);
-  fscanf(f,"%x,%x,%x,%x",&mata[4],&mata[5],&mata[6],&mata[7]);
-  fscanf(f,"%x,%x,%x,%x",&mata[8],&mata[9],&mata[10],&mata[11]);
-  fscanf(f,"%x,%x,%x,%x",&mata[12],&mata[13],&mata[14],&mata[15]);
+  fscanf(f,"%i\t%i\t%i\t%i",&mata[0],&mata[1],&mata[2],&mata[3]);
+  fscanf(f,"%i\t%i\t%i\t%i",&mata[4],&mata[5],&mata[6],&mata[7]);
+  fscanf(f,"%i\t%i\t%i\t%i",&mata[8],&mata[9],&mata[10],&mata[11]);
+  fscanf(f,"%i\t%i\t%i\t%i",&mata[12],&mata[13],&mata[14],&mata[15]);
 
-  fscanf(f,"%x,%x,%x,%x",&matb[0],&matb[1],&matb[2],&matb[3]);
-  fscanf(f,"%x,%x,%x,%x",&matb[4],&matb[5],&matb[6],&matb[7]);
-  fscanf(f,"%x,%x,%x,%x",&matb[8],&matb[9],&matb[10],&matb[11]);
-  fscanf(f,"%x,%x,%x,%x",&matb[12],&matb[13],&matb[14],&matb[15]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matb[0],&matb[1],&matb[2],&matb[3]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matb[4],&matb[5],&matb[6],&matb[7]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matb[8],&matb[9],&matb[10],&matb[11]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matb[12],&matb[13],&matb[14],&matb[15]);
 
-  fscanf(f,"%x,%x,%x,%x",&matc[0],&matc[1],&matc[2],&matc[3]);
-  fscanf(f,"%x,%x,%x,%x",&matc[4],&matc[5],&matc[6],&matc[7]);
-  fscanf(f,"%x,%x,%x,%x",&matc[8],&matc[9],&matc[10],&matc[11]);
-  fscanf(f,"%x,%x,%x,%x",&matc[12],&matc[13],&matc[14],&matc[15]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matc[0],&matc[1],&matc[2],&matc[3]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matc[4],&matc[5],&matc[6],&matc[7]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matc[8],&matc[9],&matc[10],&matc[11]);
+  fscanf(f,"%i\t%i\t%i\t%i",&matc[12],&matc[13],&matc[14],&matc[15]);
 
   matab_display(mata);
   matab_display(matb);
 
   mat_product_c(mata,matb,matc_calc);
 
-//  printf("\nResult:");
-//  matc_display(matc_calc);
+  printf("\nResult:");
+  matc_display(matc_calc);
 
   if(!matc_checker(matc,matc_calc))
   {
-    printf("!!!MATRIX PRODUCT FAILURE!!!");
+    printf("!!!MATRIX PRODUCT FAILURE!!!\n");
     return 1;
   }
-  printf("!!!MATRIX PRODUCT SUCCESS!!!");
+  printf("!!!MATRIX PRODUCT SUCCESS!!!\n");
   
   return 0;
 }
