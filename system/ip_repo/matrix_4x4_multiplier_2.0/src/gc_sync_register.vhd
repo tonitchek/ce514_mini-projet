@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 
 entity gc_sync_register is
   generic (
+    g_reset_active_level : string := "high";
     g_width : integer := 32);
   port (
     clk_i : in  std_logic;
@@ -20,20 +21,39 @@ architecture rtl of gc_sync_register is
 
 begin
 
-  process(clk_i)
-  begin
-    if clk_i'event and clk_i = '1' then
-      if rst_i = '1' then
-        sync0 <= (others => '0');
-        sync1 <= (others => '0');
-        sync2 <= (others => '0');
-      else
-        sync0 <= d_i;
-        sync1 <= sync0;
-        sync2 <= sync1;
+  active_low: if g_reset_active_level = "low" generate
+    process(clk_i)
+    begin
+      if clk_i'event and clk_i = '1' then
+        if rst_i = '0' then
+          sync0 <= (others => '0');
+          sync1 <= (others => '0');
+          sync2 <= (others => '0');
+        else
+          sync0 <= d_i;
+          sync1 <= sync0;
+          sync2 <= sync1;
+        end if;
       end if;
-    end if;
-  end process;
+    end process;
+  end generate active_low;
+
+  active_high: if g_reset_active_level = "high" generate
+    process(clk_i)
+    begin
+      if clk_i'event and clk_i = '1' then
+        if rst_i = '1' then
+          sync0 <= (others => '0');
+          sync1 <= (others => '0');
+          sync2 <= (others => '0');
+        else
+          sync0 <= d_i;
+          sync1 <= sync0;
+          sync2 <= sync1;
+        end if;
+      end if;
+    end process;
+  end generate active_high;
 
   q_o <= sync2;
 

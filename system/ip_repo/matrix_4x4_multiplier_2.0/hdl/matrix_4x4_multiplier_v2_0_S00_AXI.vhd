@@ -21,9 +21,6 @@ entity matrix_4x4_multiplier_v2_0_S00_AXI is
 		-- Users to add ports here
 		CLK_DSP_I	: in  std_logic;
 		INHIBIT_I	: in  std_logic;
-                BEGIN_O         : out std_logic;
-                END_O           : out std_logic;
-
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -103,7 +100,6 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
 	signal axi_rdata	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 	signal axi_rresp	: std_logic_vector(1 downto 0);
 	signal axi_rvalid	: std_logic;
-	signal axi_reset_high	: std_logic;
 
 	-- Example-specific design signals
 	-- local parameter for addressing 32 bit / 64 bit C_S_AXI_DATA_WIDTH
@@ -127,13 +123,6 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
         signal stt_sync         : std_logic; -- clk_dsp_i domain
         signal done             : std_logic; -- clk_dsp_i domain
         signal done_sync        : std_logic; -- s_axi_aclk domain
-        signal done_monostable  : std_logic; -- clk_dsp_i domain
-        signal csr_bgn_reg      : std_logic; -- s_axi_aclk domain
-        signal bgn_sync         : std_logic; -- clk_dsp_i domain
-        signal csr_end_reg      : std_logic; -- s_axi_aclk domain
-        signal end_sync         : std_logic; -- clk_dsp_i domain
-        signal csr_ato_reg      : std_logic; -- s_axi_aclk domain
-        signal ato_sync         : std_logic; -- clk_dsp_i domain
         -- MATA & MATB (REG2...REG33) declaration
         type slv_reg_mat_in_array is array (3 downto 0) of std_logic_vector(31 downto 0);
         signal mata_row0_reg02_05 : slv_reg_mat_in_array; -- s_axi_aclk domain
@@ -182,6 +171,8 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
         end component;
 
         component gc_synchronizer is
+          generic (
+            g_reset_active_level : string := "high");
           port (
             clk_i : in  std_logic;
             rst_i : in  std_logic;
@@ -199,6 +190,7 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0_S00_AXI is
 
         component gc_sync_register is
           generic (
+            g_reset_active_level : string := "high";
             g_width : integer := 32);
           port (
             clk_i : in  std_logic;
@@ -305,9 +297,6 @@ begin
 	  if rising_edge(S_AXI_ACLK) then 
 	    if S_AXI_ARESETN = '0' then
               csr_stt_reg        <= '0';
-              csr_bgn_reg        <= '0';
-              csr_end_reg        <= '0';
-              csr_ato_reg        <= '0';
               mata_row0_reg02_05 <= (others => (others => '0'));
               mata_row1_reg06_09 <= (others => (others => '0'));
               mata_row2_reg10_13 <= (others => (others => '0'));
@@ -322,9 +311,6 @@ begin
 	        case loc_addr is
 	          when b"000000" =>
                     csr_stt_reg <= S_AXI_WDATA(0);
-                    csr_bgn_reg <= S_AXI_WDATA(2);
-                    csr_end_reg <= S_AXI_WDATA(3);
-                    csr_ato_reg <= S_AXI_WDATA(4);
 	          when b"000010" =>
                     mata_row0_reg02_05(0) <= S_AXI_WDATA;
 	          when b"000011" =>
@@ -497,7 +483,7 @@ begin
                 loc_addr := axi_araddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
                 case loc_addr is
                   when b"000000" =>
-                    axi_rdata <= "000000000000000000000000000" & csr_ato_reg & "00" & done_sync & '0';
+                    axi_rdata <= "000000000000000000000000000000" & done_sync & '0';
                   when b"000001" =>
                     axi_rdata <= X"00000000"; --unused / reserved
                   when b"000010" =>
@@ -607,8 +593,6 @@ begin
 
 
 	-- Add user logic here
-        axi_reset_high <= not S_AXI_ARESETN;
-        
         matrix_4x4_mult_inst:m4x4_mult
           port map (
             clk_i        => CLK_DSP_I,
@@ -659,55 +643,24 @@ begin
             d_i   => csr_stt_reg,
             q_o   => stt_sync
             );
-        csr_bgn_monstable:gc_sync_monostable
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => csr_bgn_reg,
-            q_o   => bgn_sync
-            );
-        csr_end_monstable:gc_sync_monostable
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => csr_end_reg,
-            q_o   => end_sync
-            );
-        done_monstable:gc_sync_monostable
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => done,
-            q_o   => done_monostable
-            );
 
         --CSR synchronizer
         csr_done_sync:gc_synchronizer
+          generic map (
+            g_reset_active_level => "low"
+            )
           port map (
             clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
+            rst_i => S_AXI_ARESETN,
             d_i   => done,
             q_o   => done_sync
             );
-        csr_ato_sync:gc_synchronizer
-          port map (
-            clk_i => CLK_DSP_I,
-            rst_i => reset_sync,
-            d_i   => csr_ato_reg,
-            q_o   => ato_sync
-            );
-
-        --We want to put monostable signals on BEGIN_O and END_O outputs
-        --stt_sync is a monostable generated in clk_dsp_i clock domain
-        --so generate all monstable in clk_dsp_i clock domain and
-        --synchronize the selector csr_ato_reg in the clk_dsp_i clock domain
-        BEGIN_O <= bgn_sync when ato_sync = '0' else stt_sync;
-        END_O   <= end_sync when ato_sync = '0' else done_monostable;
 
         -- MATA REGISTERS synchonizers from S_AXI_ACLK to CLK_DSP_I
         mata_row0_reg_sync:for I in 0 to 3 generate
           mata_row0_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -720,6 +673,7 @@ begin
         mata_row1_reg_sync:for I in 0 to 3 generate
           mata_row1_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -732,6 +686,7 @@ begin
         mata_row2_reg_sync:for I in 0 to 3 generate
           mata_row2_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -744,6 +699,7 @@ begin
         mata_row3_reg_sync:for I in 0 to 3 generate
           mata_row3_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -757,6 +713,7 @@ begin
         matb_col0_reg_sync:for I in 0 to 3 generate
           matb_col0_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -769,6 +726,7 @@ begin
         matb_col1_reg_sync:for I in 0 to 3 generate
           matb_col1_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -781,6 +739,7 @@ begin
         matb_col2_reg_sync:for I in 0 to 3 generate
           matb_col2_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -793,6 +752,7 @@ begin
         matb_col3_reg_sync:for I in 0 to 3 generate
           matb_col3_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "high",
               g_width => 8
               )
             port map (
@@ -807,11 +767,12 @@ begin
         matc_row0_reg_sync:for I in 0 to 3 generate
           matc_row0_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "low",
               g_width => 18
               )
             port map (
             clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
+            rst_i => S_AXI_ARESETN,
             d_i   => matc_rows0_out(I),
             q_o   => matc_row0_reg34_37(I)
             );
@@ -819,11 +780,12 @@ begin
         matc_row1_reg_sync:for I in 0 to 3 generate
           matc_row1_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "low",
               g_width => 18
               )
             port map (
             clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
+            rst_i => S_AXI_ARESETN,
             d_i   => matc_rows1_out(I),
             q_o   => matc_row1_reg38_41(I)
             );
@@ -831,11 +793,12 @@ begin
         matc_row2_reg_sync:for I in 0 to 3 generate
           matc_row2_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "low",
               g_width => 18
               )
             port map (
             clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
+            rst_i => S_AXI_ARESETN,
             d_i   => matc_rows2_out(I),
             q_o   => matc_row2_reg42_45(I)
             );
@@ -843,16 +806,16 @@ begin
         matc_row3_reg_sync:for I in 0 to 3 generate
           matc_row3_sync:gc_sync_register
             generic map (
+              g_reset_active_level => "low",
               g_width => 18
               )
             port map (
             clk_i => S_AXI_ACLK,
-            rst_i => axi_reset_high,
+            rst_i => S_AXI_ARESETN,
             d_i   => matc_rows3_out(I),
             q_o   => matc_row3_reg46_49(I)
             );
         end generate matc_row3_reg_sync;
-
 	-- User logic ends
 
 end arch_imp;

@@ -28,7 +28,7 @@ end entity;
 
 architecture rtl of m4x4_mult is
 
-  type stmac is (idle, acc, done);
+  type stmac is (idle, acc);
   signal state   : stmac;
   signal acc_int : std_logic;
 
@@ -120,6 +120,7 @@ begin
             if start_i = '1' then
               if inhibit_i = '0' then
                 done_o <= '0';
+                acc_int <= '1';
                 state <= acc;
               else
                 state <= idle;
@@ -129,12 +130,8 @@ begin
             end if;
 
           when acc =>
-            acc_int <='1';
-            state <= done;
-
-          when done =>
+            acc_int <='0';
             done_o <= '1';
-            acc_int <= '0';
             state <= idle;
 
           when others =>

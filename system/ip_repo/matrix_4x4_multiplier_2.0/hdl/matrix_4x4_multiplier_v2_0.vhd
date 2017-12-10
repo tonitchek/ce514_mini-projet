@@ -18,9 +18,6 @@ entity matrix_4x4_multiplier_v2_0 is
 		-- Users to add ports here
 		CLK_DSP_I	: in  std_logic;
 		INHIBIT_I	: in  std_logic;
-                BEGIN_O         : out std_logic;
-                END_O           : out std_logic;
-
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -61,8 +58,6 @@ architecture arch_imp of matrix_4x4_multiplier_v2_0 is
 		port (
 		CLK_DSP_I	: in  std_logic;
 		INHIBIT_I	: in  std_logic;
-                BEGIN_O         : out std_logic;
-                END_O           : out std_logic;
 		S_AXI_ACLK	: in std_logic;
 		S_AXI_ARESETN	: in std_logic;
 		S_AXI_AWADDR	: in std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
@@ -98,8 +93,6 @@ matrix_4x4_multiplier_v2_0_S00_AXI_inst : matrix_4x4_multiplier_v2_0_S00_AXI
 	port map (
 		CLK_DSP_I	=> clk_dsp_i,
 		INHIBIT_I	=> inhibit_i,
-                BEGIN_O         => begin_o,
-                END_O           => end_o,
 		S_AXI_ACLK	=> s00_axi_aclk,
 		S_AXI_ARESETN	=> s00_axi_aresetn,
 		S_AXI_AWADDR	=> s00_axi_awaddr,
