@@ -378,6 +378,9 @@ begin
 	          when others =>
                     mata_row0_reg02_05(0) <= mata_row0_reg02_05(0);
 	        end case;
+              else
+                csr_stt_reg <= '0'; -- reset the start bit of the CSR after the
+                                    -- slave read
 	      end if;
 	    end if;
 	  end if;                   
