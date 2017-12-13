@@ -1,0 +1,13 @@
+Modify uramdisk.image.gz
+------------------------
+mkdir mnt_ramdisk
+dd bs=1 skip=64 if=uramdisk.image.gz of=ramdisk.image.gz
+gunzip ramdisk.image.gz
+sudo mount -o loop ramdisk.image mnt_ramdisk
+cd mnt_ramdisk/
+[make modifications]
+cd ..
+sudo umount mnt_ramdisk
+gzip ramdisk.image
+mkimage -A arm -T ramdisk -C gzip -d ramdisk.image.gz uramdisk.image.gz
+rm ramdisk.image.gz
