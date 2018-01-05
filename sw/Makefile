@@ -5,8 +5,6 @@ ARM_INC=$(TOOLCHAIN)/lib/gcc/arm-xilinx-linux-gnueabi/4.9.2/include
 SYS_LIB=$(TOOLCHAIN)/arm-xilinx-linux-gnueabi/libc/usr/lib
 CFLAGS=-c -O3 -Wall -I. -I$(SYS_INC) -I$(ARM_INC)
 LDFLAGS= -L$(SYS_LIB)
-#LIBS=-Wl,--start-group,-lxil,-lgcc,-lc,--end-group
-LIBS=
 
 APP=m4x4_multiplier
 TARGET_APP_HOME=../platform/linux/rootfs/mnt_ramdisk/root

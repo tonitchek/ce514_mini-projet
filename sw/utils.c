@@ -1,3 +1,8 @@
+/*
+ * utils.c
+ *
+ *      Author: perrin
+ */
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -91,13 +96,4 @@ uint8_t check_output_matrix(uint32_t *matc, uint32_t *matc_ip)
     }
   }
   return 1;
-}
-
-void u8_2_float(uint8_t *mat_u8, float *mat_f)
-{
-  uint8_t i;
-  for(i=0;i<16;i++)
-  {
-    mat_f[i]=(float)mat_u8[i];
-  }
 }

@@ -74,11 +74,14 @@ int main(int ac, char** av)
   if (fd < 0)
   {
     printf("open(/dev/mem) failed\n");
+    return 1;
   }
   volatile uint8_t *mm = (volatile uint8_t*)mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, IP_BASEADDR);
   if (mm == MAP_FAILED)
   {
     printf("mmap failed\n");
+    close(fd);
+    return 1;
   }
 
   if(interactive_mode)
@@ -193,82 +196,6 @@ int main(int ac, char** av)
   if(performance)
   {
     printf("Not yet implemented\n");
-/*    f = fopen("tb_matrix.dat","r");
-    if(f==NULL)
-    {
-      fprintf(stderr,"Error opening file\n");
-      munmap((void *)mm, PAGE_SIZE);
-      close(fd);
-      return 1;
-    }
-    uint8_t mata[16];
-    uint8_t matb[16];
-    uint32_t matc[16];
-    //read matrix B
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&mata[0],&mata[1],&mata[2],&mata[3]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&mata[4],&mata[5],&mata[6],&mata[7]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&mata[8],&mata[9],&mata[10],&mata[11]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&mata[12],&mata[13],&mata[14],&mata[15]);
-    //read matrix B    
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&matb[0],&matb[1],&matb[2],&matb[3]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&matb[4],&matb[5],&matb[6],&matb[7]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&matb[8],&matb[9],&matb[10],&matb[11]);
-    fscanf(f,"%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "\t%" SCNu8 "",&matb[12],&matb[13],&matb[14],&matb[15]);
-    fclose(f);
-    mat_display_u8(mata);
-    mat_display_u8(matb);
-    //get time overhead
-    struct timespec begin, end;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&begin);
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&end);
-    long overhead = end.tv_nsec-begin.tv_nsec;
-    printf("Time overhead: %ld\n",overhead);
-    //measure execution time for computation with Cortex A9
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&begin);
-    mat_product_c_u8(mata,matb,matc);
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&end);
-    printf("CPU time execution: %ld\n",end.tv_nsec-begin.tv_nsec);
-    //measure execution time for computation with NEON
-    float mata_f[16];
-    float matb_f[16];
-    float matc_f[16];
-    u8_2_float(mata,mata_f);
-    u8_2_float(matb,matb_f);
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&begin);
-    mat_product_n3(mata_f,matb_f,matc_f);
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&end);
-    mat_display_float(matc_f);
-    printf("NEON time execution: %ld\n",end.tv_nsec-begin.tv_nsec);
-    //measure execution time for computation with IP
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&begin);
-    //load matrix A (row by row)
-    uint8_t i;
-    for(i=0;i<16;i++)
-    {
-      *(volatile uint32_t*)(mm + MATA_ELEMENT_START_OFFSET+(i*4)) = (uint32_t)mata[i];
-    }
-    //load matrix B (column by column)
-    uint8_t j,k=0;
-    for(i=0;i<4;i++)
-    {
-      for(j=0;j<4;j++)
-      {
-        *(volatile uint32_t*)(mm + MATB_ELEMENT_START_OFFSET+(k*4)) = (uint32_t)matb[i+j*4];
-        k++;
-      }
-    }
-    //start IP calcul
-    *(volatile uint32_t*)(mm + CSR_OFFSET) = (uint32_t)0x1;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID,&end);
-    //store matrix C
-    for(i=0;i<16;i++)
-    {
-      matc[i] = *(volatile uint32_t*)(mm + MATC_ELEMENT_START_OFFSET+(i*4));
-    }
-    //display output matrix
-    mat_display_u32(matc);
-    printf("IP time execution: %ld\n",end.tv_nsec-begin.tv_nsec);
-*/
   }
 
   munmap((void *)mm, PAGE_SIZE);

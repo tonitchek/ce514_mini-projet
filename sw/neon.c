@@ -1,3 +1,8 @@
+/*
+ * neon.c
+ *
+ *      Author: perrin
+ */
 #include <arm_neon.h>
 
 int16_t sum_neon(int16_t *tab, uint32_t n)
